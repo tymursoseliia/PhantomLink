@@ -190,11 +190,11 @@ flutter_gen:
 
 flutter_native_splash:
   color: "#000000"
-  image: "/Users/tymur613/.gemini/antigravity/brain/3a79d5c9-ba1c-4fbd-b62a-3b2f472ceadf/media__1778268722833.jpg"
+  image: "assets/images/phantomlink_logo.jpg"
   android_gravity: center
   android_12:
     color: "#000000"
-    image: "/Users/tymur613/.gemini/antigravity/brain/3a79d5c9-ba1c-4fbd-b62a-3b2f472ceadf/media__1778268722833.jpg"
+    image: "assets/images/phantomlink_logo.jpg"
 
 ffigen:
   name: "HiddifyCoreNativeLibrary"

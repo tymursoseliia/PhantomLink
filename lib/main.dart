@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:hiddify/bootstrap.dart';
@@ -7,7 +8,9 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  MobileAds.instance.initialize();
+  if (Platform.isAndroid || Platform.isIOS) {
+    MobileAds.instance.initialize();
+  }
   // final widgetsBinding = SentryWidgetsFlutterBinding.ensureInitialized();
   // debugPaintSizeEnabled = true;
 
