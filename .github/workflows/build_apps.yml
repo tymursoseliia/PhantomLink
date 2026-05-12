@@ -1,0 +1,79 @@
+name: Build Apps for Website
+
+on:
+  workflow_dispatch: # Allows running manually from GitHub UI
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          channel: 'stable'
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          
+      - name: Install Dependencies
+        run: make android-apk-install-deps || echo "Skipping deps"
+
+      - name: Build APK
+        run: flutter build apk --release
+        
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhantomLink-Android
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+        
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhantomLink-Windows
+          path: build/windows/x64/runner/Release/*
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build macOS
+        run: flutter build macos --release
+        
+      - name: Create DMG
+        run: |
+          npm install -g create-dmg
+          create-dmg build/macos/Build/Products/Release/Hiddify.app || echo "DMG created"
+        
+      - name: Upload macOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhantomLink-MacOS
+          path: "*.dmg"
