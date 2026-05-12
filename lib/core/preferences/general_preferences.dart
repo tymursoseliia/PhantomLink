@@ -87,12 +87,21 @@ abstract class Preferences {
     PlatformUtils.isDesktop,
   );
 
+  static final themeMode = PreferencesNotifier.create<ThemeMode, String>(
+    "theme_mode",
+    ThemeMode.system,
+    mapFrom: ThemeMode.values.byName,
+    mapTo: (value) => value.name,
+  );
+
   static final perAppProxyMode = PreferencesNotifier.create<PerAppProxyMode, String>(
     "per_app_proxy_mode",
     PerAppProxyMode.off,
     mapFrom: PerAppProxyMode.values.byName,
     mapTo: (value) => value.name,
   );
+
+
 
   static final markNewProfileActive = PreferencesNotifier.create<bool, bool>("mark_new_profile_active", true);
 

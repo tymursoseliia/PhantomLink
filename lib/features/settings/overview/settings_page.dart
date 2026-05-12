@@ -8,211 +8,271 @@ import 'package:hiddify/features/settings/notifier/config_option/config_option_n
 import 'package:hiddify/features/settings/notifier/reset_tunnel/reset_tunnel_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-enum ConfigOptionSection {
-  warp,
-  fragment;
-
-  static final _warpKey = GlobalKey(debugLabel: "warp-section-key");
-  static final _fragmentKey = GlobalKey(debugLabel: "fragment-section-key");
-
-  GlobalKey get key => switch (this) {
-    ConfigOptionSection.warp => _warpKey,
-    ConfigOptionSection.fragment => _fragmentKey,
-  };
-}
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends HookConsumerWidget {
-  SettingsPage({super.key, String? section})
-    : section = section != null ? ConfigOptionSection.values.byName(section) : null;
+  const SettingsPage({super.key});
 
-  final ConfigOptionSection? section;
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
-    // final scrollController = useScrollController();
-
-    // useMemoized(
-    //   () {
-    //     if (section != null) {
-    //       WidgetsBinding.instance.addPostFrameCallback(
-    //         (_) {
-    //           final box = section!.key.currentContext?.findRenderObject() as RenderBox?;
-
-    //           final offset = box?.localToGlobal(Offset.zero);
-    //           if (offset == null) return;
-    //           final height = scrollController.offset + offset.dy - MediaQueryData.fromView(View.of(context)).padding.top - kToolbarHeight;
-    //           scrollController.animateTo(
-    //             height,
-    //             duration: const Duration(milliseconds: 500),
-    //             curve: Curves.decelerate,
-    //           );
-    //         },
-    //       );
-    //     }
-    //   },
-    // );
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
       appBar: AppBar(
-        title: Text(t.pages.settings.title),
-        actions: [
-          MenuAnchor(
-            menuChildren: <Widget>[
-              SubmenuButton(
-                menuChildren: <Widget>[
-                  MenuItemButton(
-                    onPressed: () async => await ref
-                        .read(dialogNotifierProvider.notifier)
-                        .showConfirmation(
-                          title: t.common.msg.import.confirm,
-                          message: t.dialogs.confirmation.settings.import.msg,
-                        )
-                        .then((shouldImport) async {
-                          if (shouldImport) {
-                            await ref.read(configOptionNotifierProvider.notifier).importFromClipboard();
-                          }
-                        }),
-                    child: Text(t.pages.settings.options.import.clipboard),
-                  ),
-                  MenuItemButton(
-                    onPressed: () async => await ref
-                        .read(dialogNotifierProvider.notifier)
-                        .showConfirmation(
-                          title: t.common.msg.import.confirm,
-                          message: t.dialogs.confirmation.settings.import.msg,
-                        )
-                        .then((shouldImport) async {
-                          if (shouldImport) {
-                            await ref.read(configOptionNotifierProvider.notifier).importFromJsonFile();
-                          }
-                        }),
-                    child: Text(t.pages.settings.options.import.file),
-                  ),
-                ],
-                child: Text(t.common.import),
-              ),
-              SubmenuButton(
-                menuChildren: <Widget>[
-                  MenuItemButton(
-                    onPressed: () async => await ref.read(configOptionNotifierProvider.notifier).exportJsonClipboard(),
-                    child: Text(t.pages.settings.options.export.anonymousToClipboard),
-                  ),
-                  MenuItemButton(
-                    onPressed: () async => await ref.read(configOptionNotifierProvider.notifier).exportJsonFile(),
-                    child: Text(t.pages.settings.options.export.anonymousToFile),
-                  ),
-                  const PopupMenuDivider(),
-                  MenuItemButton(
-                    onPressed: () async => await ref
-                        .read(configOptionNotifierProvider.notifier)
-                        .exportJsonClipboard(excludePrivate: false),
-                    child: Text(t.pages.settings.options.export.allToClipboard),
-                  ),
-                  MenuItemButton(
-                    onPressed: () async =>
-                        await ref.read(configOptionNotifierProvider.notifier).exportJsonFile(excludePrivate: false),
-                    child: Text(t.pages.settings.options.export.allToFile),
-                  ),
-                ],
-                child: Text(t.common.export),
-              ),
-              const PopupMenuDivider(),
-              MenuItemButton(
-                child: Text(t.pages.settings.options.reset),
-                onPressed: () async => await ref.read(configOptionNotifierProvider.notifier).resetOption(),
-              ),
-            ],
-            builder: (context, controller, child) => IconButton(
-              onPressed: () {
-                if (controller.isOpen) {
-                  controller.close();
-                } else {
-                  controller.open();
-                }
-              },
-              icon: const Icon(Icons.more_vert_rounded),
-            ),
-          ),
-          const Gap(8),
-        ],
+        title: const Text('Settings'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         children: [
-          // TipCard(message: t.settings.experimentalMsg),
-          SettingsSection(
-            title: t.pages.settings.general.title,
-            icon: Icons.layers_rounded,
-            namedLocation: context.namedLocation('general'),
-          ),
-          SettingsSection(
-            title: t.pages.settings.routing.title,
-            icon: Icons.route_rounded,
-            namedLocation: context.namedLocation('routeOptions'),
-          ),
-          SettingsSection(
-            title: t.pages.settings.dns.title,
-            icon: Icons.dns_rounded,
-            namedLocation: context.namedLocation('dnsOptions'),
-          ),
-          SettingsSection(
-            title: t.pages.settings.inbound.title,
-            icon: Icons.input_rounded,
-            namedLocation: context.namedLocation('inboundOptions'),
-          ),
-          SettingsSection(
-            title: t.pages.settings.tlsTricks.title,
-            icon: Icons.content_cut_rounded,
-            namedLocation: context.namedLocation('tlsTricks'),
-          ),
-          SettingsSection(
-            title: t.pages.settings.warp.title,
-            icon: Icons.cloud_rounded,
-            namedLocation: context.namedLocation('warpOptions'),
-          ),
-          if (PlatformUtils.isIOS)
-            Material(
-              child: ListTile(
-                title: Text(t.pages.settings.resetTunnel),
-                leading: const Icon(Icons.autorenew_rounded),
-                onTap: () async {
-                  await ref.read(resetTunnelNotifierProvider.notifier).run();
-                },
+          // 1. Account & Subscription Block
+          _buildSectionHeader(context, 'Account & Subscription'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Account', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+                      const Text('user@phantomlink.cc', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Status', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+                      Text('Premium', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Valid until', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+                      const Text('Oct 12, 2026', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const Gap(24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _launchUrl('https://phantomlink1.netlify.app/dashboard'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Manage Subscription'),
+                    ),
+                  ),
+                ],
               ),
             ),
-          if (Breakpoint(context).isMobile()) ...[
-            SettingsSection(
-              title: t.pages.logs.title,
-              icon: Icons.description_rounded,
-              namedLocation: context.namedLocation('logs'),
+          ),
+          const Gap(24),
+
+          // 2. Connection & Protocol Block
+          _buildSectionHeader(context, 'Connection & Protocol'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.vpn_key_rounded),
+                  title: const Text('VPN Protocol'),
+                  subtitle: const Text('Automatic (Recommended)'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                     // In the future this can open a modal for VLESS/Reality manual selection
+                  },
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.route_rounded),
+                  title: const Text('Routing Mode'),
+                  subtitle: const Text('Global'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.go(context.namedLocation('routeOptions')),
+                ),
+              ],
             ),
-            SettingsSection(
-              title: t.pages.about.title,
-              icon: Icons.info_rounded,
-              namedLocation: context.namedLocation('about'),
+          ),
+          const Gap(24),
+
+          // 3. Security Block
+          _buildSectionHeader(context, 'Security'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  value: true,
+                  onChanged: (val) {},
+                  secondary: const Icon(Icons.shield_rounded),
+                  title: const Text('Always-on VPN (Kill Switch)'),
+                  subtitle: const Text('Blocks internet if VPN connection drops to prevent IP leaks.'),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.dns_rounded),
+                  title: const Text('DNS Settings'),
+                  subtitle: const Text('Automatic'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.go(context.namedLocation('dnsOptions')),
+                ),
+              ],
             ),
-          ],
+          ),
+          const Gap(24),
+
+          // 4. General Block
+          _buildSectionHeader(context, 'General'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  value: false,
+                  onChanged: (val) {},
+                  secondary: const Icon(Icons.power_settings_new_rounded),
+                  title: const Text('Auto-Connect on Startup'),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.language_rounded),
+                  title: const Text('Language'),
+                  subtitle: const Text('English'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.go(context.namedLocation('general')),
+                ),
+                if (Breakpoint(context).isMobile()) ...[
+                  const Divider(height: 1, indent: 56),
+                  ListTile(
+                    leading: const Icon(Icons.description_rounded),
+                    title: Text(t.pages.logs.title),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.go(context.namedLocation('logs')),
+                  ),
+                ]
+              ],
+            ),
+          ),
+          const Gap(24),
+
+          // 5. Legal & Info Block
+          _buildSectionHeader(context, 'Legal & Info'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_rounded),
+                  title: const Text('Privacy Policy'),
+                  trailing: const Icon(Icons.open_in_new_rounded, size: 20),
+                  onTap: () => _launchUrl('https://phantomlink.cc/privacy-policy'),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.article_rounded),
+                  title: const Text('Terms of Service'),
+                  trailing: const Icon(Icons.open_in_new_rounded, size: 20),
+                  onTap: () => _launchUrl('https://phantomlink.cc/terms-of-service'),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.support_agent_rounded),
+                  title: const Text('Contact Support'),
+                  trailing: const Icon(Icons.open_in_new_rounded, size: 20),
+                  onTap: () => _launchUrl('mailto:support@phantomlink.cc'),
+                ),
+              ],
+            ),
+          ),
+          
+          const Gap(16),
+          Center(
+            child: Text(
+              'PhantomLink v.1.0.0 (Build 12)',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
+          ),
+          const Gap(32),
+
+          // 6. Danger Zone Block
+          _buildSectionHeader(context, 'Danger Zone', color: Colors.redAccent),
+          Card(
+            elevation: 0,
+            color: Colors.red.withOpacity(0.05),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.red.withOpacity(0.2)),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
+              title: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Account'),
+                    content: const Text('Are you sure? This action is irreversible, and your active subscription will be canceled.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // TODO: Implement actual API call to delete user from Marzban
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Account deletion request sent.')),
+                          );
+                        },
+                        child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const Gap(40),
         ],
       ),
     );
   }
-}
 
-class SettingsSection extends HookConsumerWidget {
-  const SettingsSection({super.key, required this.title, required this.icon, required this.namedLocation});
-
-  final String title;
-  final IconData icon;
-  final String namedLocation;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: () => context.go(namedLocation),
+  Widget _buildSectionHeader(BuildContext context, String title, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 8, top: 8),
+      child: Text(
+        title.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: color ?? Colors.grey.shade600,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 }

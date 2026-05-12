@@ -23,7 +23,7 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
     final t = ref.watch(translationsProvider).requireValue;
 
     // Early return if required data is not available
-    if (connectionState != const Connected() || activeProxy == null) {
+    if (activeProxy == null) {
       return const SizedBox.shrink();
     }
 
@@ -65,7 +65,6 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: IPCountryFlag(
                   countryCode: activeProxy.ipinfo.countryCode,
-                  organization: activeProxy.ipinfo.org,
                   size: 48,
                 ),
               ),
@@ -78,29 +77,11 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
                   Semantics(
                     label: t.pages.proxies.activeProxy,
                     child: Text(
-                      // getRealOutboundTag(activeProxy),
-                      activeProxy.tagDisplay,
-                      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                      _cleanProxyName(activeProxy.ipinfo.countryCode),
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (activeProxy.ipinfo.ip.isNotEmpty)
-                        IPText(ip: activeProxy.ipinfo.ip, onLongPress: handleUrlTest, constrained: true)
-                      else
-                        UnknownIPText(text: t.pages.proxies.unknownIp, onTap: handleUrlTest),
-                      const Spacer(),
-                      Text(
-                        // getRealOutboundTag(activeProxy),
-                        activeProxy.type,
-                        style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -113,6 +94,13 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
         ),
       ),
     );
+  }
+
+  String _cleanProxyName(String code) {
+    if (code.toUpperCase() == 'US') return 'USA Server';
+    if (code.toUpperCase() == 'RO') return 'Romania Server';
+    if (code.toUpperCase() == 'GB' || code.toUpperCase() == 'UK') return 'Great Britain Server';
+    return 'Premium Server';
   }
 }
 

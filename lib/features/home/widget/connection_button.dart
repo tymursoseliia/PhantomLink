@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:hiddify/features/subscription/ad_helper.dart';
+import 'package:hiddify/features/subscription/notifier/subscription_tier_notifier.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
@@ -115,29 +119,68 @@ class ConnectionButton extends HookConsumerWidget {
     if (delay <= 0 || delay > 65000 || connectionStatus.value != const Connected()) {
       secureLabel = "";
     }
+    final subscriptionTier = ref.watch(subscriptionTierProvider);
+    final interstitialAd = useState<InterstitialAd?>(null);
+
+    useEffect(() {
+      if (subscriptionTier == SubscriptionTier.free) {
+        AdHelper.loadInterstitialAd(
+          onLoaded: (ad) => interstitialAd.value = ad,
+        );
+      }
+      return () => interstitialAd.value?.dispose();
+    }, [subscriptionTier]);
+
+    Future<void> handleConnectAction(Future<void> Function() action) async {
+      if (subscriptionTier == SubscriptionTier.free && interstitialAd.value != null) {
+        interstitialAd.value!.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) {
+            ad.dispose();
+            interstitialAd.value = null;
+            AdHelper.loadInterstitialAd(onLoaded: (newAd) => interstitialAd.value = newAd);
+            action();
+          },
+          onAdFailedToShowFullScreenContent: (ad, error) {
+            ad.dispose();
+            interstitialAd.value = null;
+            action();
+          },
+        );
+        await interstitialAd.value!.show();
+      } else {
+        await action();
+      }
+    }
+
     return _ConnectionButton(
       onTap: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => () async {
-          final activeProfile = await ref.read(activeProfileProvider.future);
-          return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
+          handleConnectAction(() async {
+            final activeProfile = await ref.read(activeProfileProvider.future);
+            return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
+          });
         },
         AsyncData(value: Disconnected()) || AsyncError() => () async {
-          if (ref.read(activeProfileProvider).valueOrNull == null) {
-            await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
-            ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
-          }
-          if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-          }
+          handleConnectAction(() async {
+            if (ref.read(activeProfileProvider).valueOrNull == null) {
+              await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
+              ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
+            }
+            if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
+              return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+            }
+          });
         },
         AsyncData(value: Connected()) => () async {
-          if (requiresReconnect == true &&
-              await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref
-                .read(connectionNotifierProvider.notifier)
-                .reconnect(await ref.read(activeProfileProvider.future));
-          }
-          return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+          handleConnectAction(() async {
+            if (requiresReconnect == true &&
+                await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
+              return await ref
+                  .read(connectionNotifierProvider.notifier)
+                  .reconnect(await ref.read(activeProfileProvider.future));
+            }
+            return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+          });
         },
         _ => () {},
       },
@@ -246,7 +289,7 @@ class _ConnectionButton extends StatelessWidget {
                       if (useImage) {
                         return image.image();
                       } else {
-                        return Assets.images.logo.svg(colorFilter: ColorFilter.mode(value!, BlendMode.srcIn));
+                        return Icon(Icons.power_settings_new_rounded, size: 76, color: value);
                       }
                     },
                   ),

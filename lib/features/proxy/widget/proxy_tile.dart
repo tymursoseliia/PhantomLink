@@ -21,29 +21,14 @@ class ProxyTile extends HookConsumerWidget with PresLogger {
     return ListTile(
       // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Text(
-        proxy.tagDisplay,
+        _cleanProxyName(proxy.ipinfo.countryCode),
         overflow: TextOverflow.ellipsis,
-        style: PlatformUtils.isWindows ? const TextStyle(fontFamily: FontFamily.emoji) : null,
+        style: PlatformUtils.isWindows ? const TextStyle(fontFamily: FontFamily.emoji) : const TextStyle(fontWeight: FontWeight.bold),
       ),
       leading: IPCountryFlag(
         countryCode: proxy.ipinfo.countryCode,
-        organization: proxy.ipinfo.org,
         size: 40,
         padding: const EdgeInsetsDirectional.only(end: 8),
-      ),
-      subtitle: Text.rich(
-        TextSpan(
-          text: proxy.type,
-          children: [
-            if (proxy.isGroup)
-              TextSpan(
-                text: ' (${proxy.groupSelectedTagDisplay.trim()})',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
       trailing: Column(
         children: [
@@ -78,5 +63,12 @@ class ProxyTile extends HookConsumerWidget with PresLogger {
       < 1500 => Colors.deepOrangeAccent,
       _ => Colors.red,
     };
+  }
+
+  String _cleanProxyName(String code) {
+    if (code.toUpperCase() == 'US') return 'USA Server';
+    if (code.toUpperCase() == 'RO') return 'Romania Server';
+    if (code.toUpperCase() == 'GB' || code.toUpperCase() == 'UK') return 'Great Britain Server';
+    return 'Premium Server';
   }
 }

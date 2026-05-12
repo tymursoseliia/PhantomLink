@@ -12,6 +12,11 @@ import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart'
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
+import 'package:hiddify/features/subscription/notifier/subscription_tier_notifier.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hiddify/utils/uri_utils.dart';
 
 class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
@@ -22,6 +27,15 @@ class HomePage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     // final hasAnyProfile = ref.watch(hasAnyProfileProvider);
     final activeProfile = ref.watch(activeProfileProvider);
+
+    useEffect(() {
+      if (activeProfile is AsyncData && activeProfile.value == null) {
+         Future.microtask(() {
+           ref.read(addProfileNotifierProvider.notifier).addClipboard("https://phantomlink.cc:8000/sub/cGhhbnRvbV9iYXNlLDE3NzgxODQ3NjAbR3d1wPNW8");
+         });
+      }
+      return null;
+    }, [activeProfile]);
 
     return Scaffold(
       appBar: AppBar(
@@ -34,7 +48,7 @@ class HomePage extends HookConsumerWidget {
         //     : null,
         title: Row(
           children: [
-            Assets.images.logo.svg(height: 24),
+            Image.asset('assets/images/phantomlink_logo.jpg', height: 28),
             const Gap(8),
             Text.rich(
               TextSpan(
@@ -49,33 +63,21 @@ class HomePage extends HookConsumerWidget {
         ),
         actions: [
           // IconButton(
-          //     onPressed: () => const QuickSettingsRoute().push(context),
-          //     icon: const Icon(FluentIcons.options_24_filled),
-          //     material: (context, platform) => MaterialIconButtonData(
-          //           tooltip: t.config.quickSettings,
-          //         )),
+          //   icon: const Icon(Icons.add_rounded),
+          //   tooltip: t.common.add,
+          //   onPressed: () async {
+          //     await ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
+          //   },
+          // ),
           // IconButton(
-          //     onPressed: () => const AddProfileRoute().push(context),
-          //     icon: const Icon(FluentIcons.add_circle_24_filled),
-          //     material: (context, platform) => MaterialIconButtonData(
-          //           tooltip: t.profile.add.buttonText,
-          //         )),
-          Semantics(
-            key: const ValueKey("profile_quick_settings"),
-            label: t.pages.home.quickSettings,
-            child: IconButton(
-              icon: Icon(Icons.tune_rounded, color: theme.colorScheme.primary),
-              onPressed: () => ref.read(bottomSheetsNotifierProvider.notifier).showQuickSettings(),
-            ),
-          ),
-          const Gap(8),
-          Semantics(
-            key: const ValueKey("profile_add_button"),
-            label: t.pages.profiles.add,
-            child: IconButton(
-              icon: Icon(Icons.add_rounded, color: theme.colorScheme.primary),
-              onPressed: () => ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile(),
-            ),
+          //   icon: const Icon(Icons.list_alt_rounded),
+          //   tooltip: t.pages.profiles.title,
+          //   onPressed: () => context.push('/profiles'),
+          // ),
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            tooltip: t.pages.settings.title,
+            onPressed: () => context.push('/settings'),
           ),
           const Gap(8),
         ],
@@ -83,15 +85,15 @@ class HomePage extends HookConsumerWidget {
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/world_map.png'), // Replace with your image path
+            image: const AssetImage('assets/images/world_map.png'),
             fit: BoxFit.cover,
             opacity: 0.09,
             colorFilter: theme.brightness == Brightness.dark
-                ? ColorFilter.mode(Colors.white.withValues(alpha: .15), BlendMode.srcIn) //
+                ? ColorFilter.mode(Colors.white.withValues(alpha: .15), BlendMode.srcIn)
                 : ColorFilter.mode(
                     Colors.grey.withValues(alpha: 1),
                     BlendMode.srcATop,
-                  ), // Apply white tint in dark mode
+                  ),
           ),
         ),
         child: Stack(
@@ -109,28 +111,57 @@ class HomePage extends HookConsumerWidget {
                     MultiSliver(
                       children: [
                         // const Gap(100),
-                        switch (activeProfile) {
-                          AsyncData(value: final profile?) => ProfileTile(
-                            profile: profile,
-                            isMain: true,
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            color: Theme.of(context).colorScheme.surfaceContainer,
-                          ),
-                          _ => const Text(""),
-                        },
-                        const SliverFillRemaining(
+                        SliverFillRemaining(
                           hasScrollBody: false,
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [ConnectionButton(), ActiveProxyDelayIndicator()],
+                              const ConnectionButton(),
+                              const Gap(40),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context.push('/proxies'),
+                                  icon: const Icon(Icons.public_rounded),
+                                  label: Text(
+                                    'Серверы',
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+                                  ),
                                 ),
                               ),
-                              ActiveProxyFooter(),
+                              if (ref.watch(subscriptionTierProvider) == SubscriptionTier.free) ...[
+                                const Gap(24),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      // Launch Premium URL
+                                      UriUtils.tryLaunch(Uri.parse('https://phantomlink.cc'));
+                                    },
+                                    // icon: const Text('👑', style: TextStyle(fontSize: 20)),
+                                    label: Text(
+                                      'Upgrade to Premium',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFFD700), // Gold
+                                      foregroundColor: Colors.black,
+                                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      elevation: 8,
+                                      shadowColor: const Color(0xFFFFD700).withOpacity(0.5),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
