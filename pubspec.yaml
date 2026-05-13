@@ -216,5 +216,8 @@ flutter_launcher_icons:
   ios: true
   macos:
     generate: true
-  image_path: "/Users/tymur613/.gemini/antigravity/brain/3a79d5c9-ba1c-4fbd-b62a-3b2f472ceadf/media__1778268722833.jpg"
+  windows:
+    generate: true
+    icon_file_path: "assets/icon.jpg"
+  image_path: "assets/icon.jpg"
   min_sdk_android: 21
