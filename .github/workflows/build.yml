@@ -118,21 +118,21 @@ jobs:
       - name: checkout
         uses: actions/checkout@v6
 
-      - name: Import Apple Codesign Certificates
-        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
-        uses: apple-actions/import-codesign-certs@v6
-        with: 
-            p12-file-base64: "${{ secrets.APPLE_CERTIFICATE_P12 }}"
-            p12-password: "${{ secrets.APPLE_CERTIFICATE_P12_PASSWORD }}"
+      # - name: Import Apple Codesign Certificates
+      #   if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
+      #   uses: apple-actions/import-codesign-certs@v6
+      #   with: 
+      #       p12-file-base64: "${{ secrets.APPLE_CERTIFICATE_P12 }}"
+      #       p12-password: "${{ secrets.APPLE_CERTIFICATE_P12_PASSWORD }}"
 
-      - name: Import Apple Mobile Provisioning Profile
-        if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
-        run: |
-           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-           echo "${{secrets.APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
-           ls ~/Library/MobileDevice/Provisioning\ Profiles
-           security unlock-keychain -p "" signing_temp.keychain
-           security find-identity -v -p codesigning
+      # - name: Import Apple Mobile Provisioning Profile
+      #   if: ${{ inputs.upload-artifact && startsWith(matrix.os,'macos') }}
+      #   run: |
+      #      mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+      #      echo "${{secrets.APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
+      #      ls ~/Library/MobileDevice/Provisioning\ Profiles
+      #      security unlock-keychain -p "" signing_temp.keychain
+      #      security find-identity -v -p codesigning
         #   ls ~/Library/MobileDevice/Provisioning\ Profiles
         #   echo "${{secrets.NEW_APPLE_MOBILE_PROVISIONING_PROFILES_TARXZ_BASE64}}"|base64 --decode | tar xJ -C ~/Library/MobileDevice/Provisioning\ Profiles
         #   # echo "${{secrets.NEW_APPLE_MOBILE_PROVISIONING_PROFILES_TARGZ_BASE64_2}}"|base64 --decode | tar xz -C ~/Library/MobileDevice/Provisioning\ Profiles
@@ -216,20 +216,20 @@ jobs:
           make ${{ matrix.platform }}-install-deps  
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
-      - name: Setup Android Signing Properties
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'android') }}
-        run: |
-          echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
-          echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
-          echo "storePassword=${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" >> android/key.properties
-          echo "keyPassword=${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> android/key.properties
+      # - name: Setup Android Signing Properties
+      #   if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'android') }}
+      #   run: |
+      #     echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
+      #     echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
+      #     echo "storePassword=${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" >> android/key.properties
+      #     echo "keyPassword=${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" >> android/key.properties
+      #     echo "keyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> android/key.properties
 
-      - name: Setup Windows Signing Properties
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
-        run: |
-            [IO.File]::WriteAllBytes("windows\sign.pfx", [Convert]::FromBase64String("${{ secrets.WINDOWS_SIGNING_KEY }}"))
-            (Get-Content "windows\packaging\msix\make_config.yaml") -replace '^certificate_password:.*$', 'certificate_password: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}' | Set-Content "windows\packaging\msix\make_config.yaml"
+      # - name: Setup Windows Signing Properties
+      #   if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+      #   run: |
+      #       [IO.File]::WriteAllBytes("windows\sign.pfx", [Convert]::FromBase64String("${{ secrets.WINDOWS_SIGNING_KEY }}"))
+      #       (Get-Content "windows\packaging\msix\make_config.yaml") -replace '^certificate_password:.*$', 'certificate_password: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}' | Set-Content "windows\packaging\msix\make_config.yaml"
         
       # - name: Temporary disable Permission Handler for windows due to its issue in permission
       #   if: ${{ startsWith(matrix.platform,'windows') }}
@@ -253,17 +253,17 @@ jobs:
         run: |
           make ${{ matrix.platform }}-release
 
-      - name: Code Sign
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
-        uses: hiddify/signtool-code-sign-sha256@main
-        with:
-          certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
-          cert-password: '${{ secrets.WINDOWS_SIGNING_PASSWORD }}'
-          cert-sha1: '${{ secrets.WINDOWS_SIGNING_SHA1 }}'
-          folder: 'dist'
-          timestamp-server: 'http://timestamp.digicert.com'
-          recursive: true
-          description: 'Hiddify'
+      # - name: Code Sign
+      #   if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+      #   uses: hiddify/signtool-code-sign-sha256@main
+      #   with:
+      #     certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
+      #     cert-password: '${{ secrets.WINDOWS_SIGNING_PASSWORD }}'
+      #     cert-sha1: '${{ secrets.WINDOWS_SIGNING_SHA1 }}'
+      #     folder: 'dist'
+      #     timestamp-server: 'http://timestamp.digicert.com'
+      #     recursive: true
+      #     description: 'Hiddify'
 
       - name: Copy to out Windows
         if: matrix.platform == 'windows'
@@ -414,19 +414,19 @@ jobs:
           body_path: './release.md'
           prerelease: true
 
-      - name: Create or Update Draft Release
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_FOR_HIDDIFY_APP_REPO }}
-          GITHUB_REPOSITORY: hiddify/hiddify-app
-        with:
-          files: ./out/*
-          name: 'draft'
-          tag_name: 'draft'
-          body_path: './release.md'
-          target_commitish: '530bf77839a74d4f13847ba244a20734ac7ab119'
-          prerelease: true
-          repository: hiddify/hiddify-app
+      # - name: Create or Update Draft Release
+      #   uses: softprops/action-gh-release@v2
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.TOKEN_FOR_HIDDIFY_APP_REPO }}
+      #     GITHUB_REPOSITORY: hiddify/hiddify-app
+      #   with:
+      #     files: ./out/*
+      #     name: 'draft'
+      #     tag_name: 'draft'
+      #     body_path: './release.md'
+      #     target_commitish: '530bf77839a74d4f13847ba244a20734ac7ab119'
+      #     prerelease: true
+      #     repository: hiddify/hiddify-app
 
   upload-release:
     permissions: write-all
@@ -470,14 +470,14 @@ jobs:
       - name: Create service_account.json
         run: echo '${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}' > service_account.json
 
-      - name: Deploy to Google Play Internal Testers
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJson: service_account.json
-          packageName: app.hiddify.com
-          releaseName: ${{ env.TAG_NAME }}
-          releaseFiles: ./hiddify-android-market.aab
-          track: 'beta'
+      # - name: Deploy to Google Play Internal Testers
+      #   uses: r0adkll/upload-google-play@v1
+      #   with:
+      #     serviceAccountJson: service_account.json
+      #     packageName: app.hiddify.com
+      #     releaseName: ${{ env.TAG_NAME }}
+      #     releaseFiles: ./hiddify-android-market.aab
+      #     track: 'beta'
 
 
   upload-to-testflight:
