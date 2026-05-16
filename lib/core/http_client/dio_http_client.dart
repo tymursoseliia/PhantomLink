@@ -32,6 +32,7 @@ class DioHttpClient with InfraLogger {
       _dio[mode]!.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client = HttpClient();
+          client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
           client.findProxy = (url) {
             if (mode == "proxy") {
               return "PROXY localhost:$port";

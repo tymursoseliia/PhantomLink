@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/features/settings/notifier/reset_tunnel/reset_tunnel_notifier.dart';
+import 'package:hiddify/features/profile/notifier/profile_notifier.dart' as hiddify;
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -84,97 +86,7 @@ class SettingsPage extends HookConsumerWidget {
               ),
             ),
           ),
-          const Gap(24),
 
-          // 2. Connection & Protocol Block
-          _buildSectionHeader(context, 'Connection & Protocol'),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.vpn_key_rounded),
-                  title: const Text('VPN Protocol'),
-                  subtitle: const Text('Automatic (Recommended)'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {
-                     // In the future this can open a modal for VLESS/Reality manual selection
-                  },
-                ),
-                const Divider(height: 1, indent: 56),
-                ListTile(
-                  leading: const Icon(Icons.route_rounded),
-                  title: const Text('Routing Mode'),
-                  subtitle: const Text('Global'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.go(context.namedLocation('routeOptions')),
-                ),
-              ],
-            ),
-          ),
-          const Gap(24),
-
-          // 3. Security Block
-          _buildSectionHeader(context, 'Security'),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  value: true,
-                  onChanged: (val) {},
-                  secondary: const Icon(Icons.shield_rounded),
-                  title: const Text('Always-on VPN (Kill Switch)'),
-                  subtitle: const Text('Blocks internet if VPN connection drops to prevent IP leaks.'),
-                ),
-                const Divider(height: 1, indent: 56),
-                ListTile(
-                  leading: const Icon(Icons.dns_rounded),
-                  title: const Text('DNS Settings'),
-                  subtitle: const Text('Automatic'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.go(context.namedLocation('dnsOptions')),
-                ),
-              ],
-            ),
-          ),
-          const Gap(24),
-
-          // 4. General Block
-          _buildSectionHeader(context, 'General'),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  value: false,
-                  onChanged: (val) {},
-                  secondary: const Icon(Icons.power_settings_new_rounded),
-                  title: const Text('Auto-Connect on Startup'),
-                ),
-                const Divider(height: 1, indent: 56),
-                ListTile(
-                  leading: const Icon(Icons.language_rounded),
-                  title: const Text('Language'),
-                  subtitle: const Text('English'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.go(context.namedLocation('general')),
-                ),
-                if (Breakpoint(context).isMobile()) ...[
-                  const Divider(height: 1, indent: 56),
-                  ListTile(
-                    leading: const Icon(Icons.description_rounded),
-                    title: Text(t.pages.logs.title),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.go(context.namedLocation('logs')),
-                  ),
-                ]
-              ],
-            ),
-          ),
           const Gap(24),
 
           // 5. Legal & Info Block
@@ -226,8 +138,42 @@ class SettingsPage extends HookConsumerWidget {
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(color: Colors.red.withOpacity(0.2)),
             ),
-            child: ListTile(
-              leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded, color: Colors.orange),
+                  title: const Text('Sign Out', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Sign Out'),
+                        content: const Text('Are you sure you want to sign out? Your downloaded profiles will be removed.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              // Clear intro flag
+                              await ref.read(Preferences.introCompleted.notifier).update(false);
+                              // Profiles will be overwritten on next login or can be manually deleted.
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                // Let the router naturally redirect to /intro because introCompleted changed
+                              }
+                            },
+                            child: const Text('Sign Out', style: TextStyle(color: Colors.orange)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
               title: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
               onTap: () {
                 showDialog(
@@ -255,7 +201,9 @@ class SettingsPage extends HookConsumerWidget {
                 );
               },
             ),
-          ),
+          ],
+        ),
+      ),
           const Gap(40),
         ],
       ),

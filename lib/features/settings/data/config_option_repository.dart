@@ -410,7 +410,8 @@ abstract class ConfigOptions {
     // final reg = ref.watch(Preferences.region.notifier).raw();
 
     return SingboxConfigOption(
-      region: ref.watch(region).name,
+      region: Region.other.name, // Forced to 'other' to ensure Global routing without local bypass rules
+
       balancerStrategy: ref.watch(balancerStrategy),
       blockAds: ref.watch(blockAds),
       useXrayCoreWhenPossible: ref.watch(useXrayCoreWhenPossible),
@@ -436,7 +437,8 @@ abstract class ConfigOptions {
       enableTun: mode == ServiceMode.tun,
       // enableTunService: mode == false, //ServiceMode.tunService,
       setSystemProxy: mode == ServiceMode.systemProxy,
-      bypassLan: ref.watch(bypassLan),
+      bypassLan: false, // Forced to false to ensure all traffic goes through VPN
+
       allowConnectionFromLan: ref.watch(allowConnectionFromLan),
       enableFakeDns: ref.watch(enableFakeDns),
       // enableDnsRouting: ref.watch(enableDnsRouting),

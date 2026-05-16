@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/analytics/analytics_controller.dart';
+import 'package:dio/dio.dart';
 import 'package:hiddify/core/http_client/dio_http_client.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -18,6 +19,8 @@ import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/settings/widget/preference_tile.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/utils/utils.dart';
+import 'package:hiddify/features/profile/notifier/profile_notifier.dart' as hiddify;
+import 'package:hiddify/features/profile/model/profile_entity.dart' as hiddify;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class IntroPage extends HookConsumerWidget with PresLogger {
@@ -46,6 +49,10 @@ class IntroPage extends HookConsumerWidget with PresLogger {
       locationInfoLoaded = true;
     }
 
+    final emailController = useTextEditingController();
+    final passwordController = useTextEditingController();
+    final obscureText = useState(true);
+
     // for focus management
     final focusStates = <String, ValueNotifier<bool>>{
       IntroConst.termsAndConditionsKey: useState<bool>(false),
@@ -70,124 +77,172 @@ class IntroPage extends HookConsumerWidget with PresLogger {
           behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
           child: SingleChildScrollView(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 620),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = constraints.maxWidth > IntroConst.maxwidth
-                          ? IntroConst.maxwidth
-                          : constraints.maxWidth;
-                      final size = width * 0.4;
-                      return Image.asset('assets/images/phantomlink_logo.jpg', width: size, height: size);
-                    },
-                  ),
-                  const Gap(16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      t.intro.banner,
-                      style: theme.textTheme.bodyLarge,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Gap(60),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth > 200.0 ? 200.0 : constraints.maxWidth;
+                        return Image.asset('assets/images/phantomlink_logo.jpg', width: width, height: width);
+                      },
                     ),
-                  ),
-                  const Gap(24),
-                  const LocalePrefTile(),
-                  ChoicePreferenceWidget(
-                    selected: ref.watch(ConfigOptions.region),
-                    preferences: ref.watch(ConfigOptions.region.notifier),
-                    choices: Region.values,
-                    title: t.pages.settings.routing.region,
-                    showFlag: true,
-                    icon: Icons.place_rounded,
-                    presentChoice: (value) => value.present(t),
-                    onChanged: (val) async {
-                      await ref.read(ConfigOptions.directDnsAddress.notifier).reset();
-                    },
-                  ),
-                  const EnableAnalyticsPrefTile(),
-                  const Gap(24),
-                  Focus(
-                    focusNode: focusNodes[IntroConst.termsAndConditionsKey],
-                    onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.termsAndConditionsKey),
-                    child: Text.rich(
-                      t.intro.termsAndPolicyCaution(
-                        tap: (text) => TextSpan(
-                          text: text,
-                          style: TextStyle(
-                            color: focusStates[IntroConst.termsAndConditionsKey]!.value ? Colors.green : Colors.blue,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
-                            },
-                        ),
+                    const Gap(32),
+                    Text(
+                      'Welcome to PhantomLink',
+                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const Gap(8),
+                    Text(
+                      'Sign in to sync your premium servers.',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      textAlign: TextAlign.center,
+                    ),
+                    const Gap(40),
+                    TextField(
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      style: theme.textTheme.bodySmall,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                     ),
-                  ),
-                  const Gap(8),
-                  Focus(
-                    focusNode: focusNodes[IntroConst.githubKey],
-                    onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.githubKey),
-                    child: Text.rich(
-                      t.intro.info(
-                        tap_source: (text) => TextSpan(
-                          text: text,
-                          style: TextStyle(
-                            color: focusStates[IntroConst.githubKey]!.value ? Colors.green : Colors.blue,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              await UriUtils.tryLaunch(Uri.parse(Constants.githubUrl));
-                            },
+                    const Gap(16),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscureText.value,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureText.value ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                          onPressed: () => obscureText.value = !obscureText.value,
                         ),
-                        tap_license: (text) => TextSpan(
-                          text: text,
-                          style: TextStyle(
-                            color: focusStates[IntroConst.githubKey]!.value ? Colors.green : Colors.blue,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              await UriUtils.tryLaunch(Uri.parse(Constants.licenseUrl));
-                            },
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      style: theme.textTheme.bodySmall,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) {
+                        // can trigger login
+                      },
                     ),
-                  ),
-                  // only for managing license node focus
-                  Focus(
-                    focusNode: focusNodes[IntroConst.licenseKey],
-                    onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.licenseKey),
-                    child: const Gap(88),
-                  ),
-                ],
+                    const Gap(32),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: isStarting.value
+                            ? null
+                            : () async {
+                                final email = emailController.text.trim();
+                                final password = passwordController.text.trim();
+                                if (email.isEmpty || password.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please enter your email and password')),
+                                  );
+                                  return;
+                                }
+
+                                isStarting.value = true;
+                                try {
+                                  final client = Dio(BaseOptions(
+                                    connectTimeout: const Duration(seconds: 15),
+                                    headers: {'User-Agent': 'PhantomLink App'},
+                                  ));
+                                  final response = await client.post(
+                                    'https://phantomlink.cc/api/auth/app-login',
+                                    data: {'email': email, 'password': password},
+                                  );
+
+                                  if (response.statusCode == 200 && response.data['success'] == true) {
+                                    final subLink = response.data['sub_link'] as String;
+                                    
+                                    // Add the profile
+                                    await ref.read(hiddify.addProfileNotifierProvider.notifier).addManual(
+                                      url: subLink,
+                                      userOverride: hiddify.UserOverride(
+                                        name: 'PhantomLink Premium',
+                                        isAutoUpdateDisable: false,
+                                      ),
+                                    );
+
+                                    // Mark intro as completed so it redirects to Home
+                                    await ref.read(Preferences.introCompleted.notifier).update(true);
+                                  } else {
+                                    throw Exception('Invalid login response');
+                                  }
+                                } catch (e) {
+                                  loggy.warning('Login failed: $e');
+                                  String errorMessage = e.toString();
+                                  if (e is DioException && e.response != null && e.response!.data != null) {
+                                    if (e.response!.data is Map && e.response!.data['error'] != null) {
+                                      errorMessage = e.response!.data['error'].toString();
+                                    }
+                                  }
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $errorMessage')),
+                                    );
+                                  }
+                                } finally {
+                                  if (context.mounted) {
+                                    isStarting.value = false;
+                                  }
+                                }
+                              },
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: isStarting.value
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const Gap(16),
+                    TextButton(
+                      onPressed: () async {
+                        await UriUtils.tryLaunch(Uri.parse('https://phantomlink.cc/dashboard'));
+                      },
+                      child: Text(
+                        "Don't have an account? Register here",
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
+                    ),
+                    const Gap(24),
+                    const LocalePrefTile(),
+                    const Gap(24),
+                    Focus(
+                      focusNode: focusNodes[IntroConst.termsAndConditionsKey],
+                      onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.termsAndConditionsKey),
+                      child: Text.rich(
+                        t.intro.termsAndPolicyCaution(
+                          tap: (text) => TextSpan(
+                            text: text,
+                            style: TextStyle(
+                              color: focusStates[IntroConst.termsAndConditionsKey]!.value ? Colors.green : Colors.blue,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
+                              },
+                          ),
+                        ),
+                        style: theme.textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const Gap(32),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: isStarting.value
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator())
-            : const Icon(Icons.rocket_launch),
-        label: Text(t.common.start, style: theme.textTheme.titleMedium),
-        onPressed: () async {
-          if (isStarting.value) return;
-          isStarting.value = true;
-          if (!ref.read(analyticsControllerProvider).requireValue) {
-            loggy.info("disabling analytics per user request");
-            try {
-              await ref.read(analyticsControllerProvider.notifier).disableAnalytics();
-            } catch (error, stackTrace) {
-              loggy.error("could not disable analytics", error, stackTrace);
-            }
-          }
-          await ref.read(Preferences.introCompleted.notifier).update(true);
-        },
       ),
     );
   }
